@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Виджет сделки</title>
+
+    <!-- 
+        БИБЛИОТЕКА БИТРИКС24
+        Она автоматически определяет, в каком портале находится,
+        и настраивает авторизацию. Подключается всегда с api.bitrix24.com
+    -->
+    <script src="//api.bitrix24.com/api/v1/"></script>
+
+    <style>
+        /* Стили под интерфейс Битрикс24 */
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            padding: 20px;
+            margin: 0;
+            background: #fff;
+        }
+
+        .widget-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2067b0;
+        }
+
+        .checkbox-row {
+            margin-bottom: 15px;
+        }
+
+        .checkbox-row label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+        }
+
+        .hidden-block {
+            display: none;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .hidden-block.visible {
+            display: block;
+        }
+
+        .field-group {
+            margin-bottom: 12px;
+        }
+
+        .field-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .field-group input[type="text"],
+        .field-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .field-group input:focus,
+        .field-group textarea:focus {
+            border-color: #2067b0;
+            outline: none;
+            box-shadow: 0 0 3px rgba(32, 103, 176, 0.3);
+        }
+
+        .btn-save {
+            background: #2067b0;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-save:hover {
+            background: #1a5490;
+        }
+
+        .btn-save:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        .status-msg {
+            margin-left: 12px;
+            font-weight: 500;
+        }
+
+        .status-msg.success { color: #2e7d32; }
+        .status-msg.error { color: #c62828; }
+
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="widget-title">📋 Дополнительные параметры сделки</div>
+
+    <div id="loadingBlock" class="loading">Загрузка данных сделки...</div>
+
+    <div id="formBlock" style="display: none;">
+        <div class="checkbox-row">
+            <label>
+                <input type="checkbox" id="mainCheckbox">
+                Требуется расширенная информация
+            </label>
+        </div>
+
+        <div id="hiddenFields" class="hidden-block">
+            <div class="field-group">
+                <label for="field1">Комментарий менеджера:</label>
+                <textarea id="field1" rows="2" placeholder="Введите комментарий..."></textarea>
+            </div>
+            <div class="field-group">
+                <label for="field2">Срок исполнения (дней):</label>
+                <input type="text" id="field2" placeholder="Например: 14">
+            </div>
+            <div class="field-group">
+                <label for="field3">Ответственный отдел:</label>
+                <input type="text" id="field3" placeholder="Например: Логистика">
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <button class="btn-save" id="btnSave" onclick="saveToBitrix()">
+                Сохранить в сделку
+            </button>
+            <span id="statusMsg" class="status-msg"></span>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  НАСТРОЙКИ — ЗАМЕНИТЕ НА ВАШИ РЕАЛЬНЫЕ КОДЫ ПОЛЕЙ!
+        //  Узнать коды: CRM → Настройки → Пользовательские поля → Сделки
+        // ============================================================
+        const CONFIG = {
+            ENTITY_TYPE_ID: 2,  // 2 = Сделки (не менять)
+            UF_CHECKBOX: 'UF_CRM_1700000001',  // Поле «Да/Нет»
+            UF_FIELD1:   'UF_CRM_1700000002',  // Текстовое поле
+            UF_FIELD2:   'UF_CRM_1700000003',  // Текстовое поле
+            UF_FIELD3:   'UF_CRM_1700000004',  // Текстовое поле
+        };
+
+        let dealId = null;
+
+        // ============================================================
+        //  ИНИЦИАЛИЗАЦИЯ — запускается, когда Битрикс загрузит виджет
+        // ============================================================
+        BX24.init(function () {
+
+            // 1) Устанавливаем размер iframe под содержимое
+            BX24.placement.resizeWindow(600, 400);
+
+            // 2) Получаем информацию о том, куда мы встроены
+            //    placement.get() возвращает { id: "123", type: "CRM_DEAL", ... }
+            const placementInfo = BX24.placement.get();
+
+            if (placementInfo && placementInfo.id) {
+                dealId = placementInfo.id;
+                console.log('📌 Виджет загружен в сделку ID:', dealId);
+                loadDealData();
+            } else {
+                showError('Не удалось определить ID сделки.');
+            }
+
+            // 3) Обработчик галочки
+            document.getElementById('mainCheckbox').addEventListener('change', toggleFields);
+        });
+
+        // ============================================================
+        //  СКРЫТИЕ / ПОКАЗ ПОЛЕЙ
+        // ============================================================
+        function toggleFields() {
+            const isChecked = document.getElementById('mainCheckbox').checked;
+            const block = document.getElementById('hiddenFields');
+
+            if (isChecked) {
+                block.classList.add('visible');
+            } else {
+                block.classList.remove('visible');
+                // Опционально: очищаем поля при снятии галочки
+                // document.getElementById('field1').value = '';
+                // document.getElementById('field2').value = '';
+                // document.getElementById('field3').value = '';
+            }
+
+            // Подстраиваем размер iframe
+            setTimeout(() => BX24.placement.resizeWindow(600, isChecked ? 450 : 200), 100);
+        }
+
+        // ============================================================
+        //  ЗАГРУЗКА ДАННЫХ ИЗ БИТРИКС24
+        // ============================================================
+        function loadDealData() {
+            BX24.callMethod(
+                'crm.item.get',
+                {
+                    entityTypeId: CONFIG.ENTITY_TYPE_ID,
+                    id: dealId
+                },
+                function (result) {
+                    document.getElementById('loadingBlock').style.display = 'none';
+                    document.getElementById('formBlock').style.display = 'block';
+
+                    if (result.error()) {
+                        showError('Ошибка загрузки: ' + result.error_description());
+                        return;
+                    }
+
+                    const item = result.data().item;
+                    if (!item) {
+                        showError('Сделка не найдена.');
+                        return;
+                    }
+
+                    // Заполняем галочку
+                    const isChecked = item[CONFIG.UF_CHECKBOX] === '1' 
+                                   || item[CONFIG.UF_CHECKBOX] === 1 
+                                   || item[CONFIG.UF_CHECKBOX] === true;
+                    document.getElementById('mainCheckbox').checked = isChecked;
+
+                    // Заполняем текстовые поля
+                    document.getElementById('field1').value = item[CONFIG.UF_FIELD1] || '';
+                    document.getElementById('field2').value = item[CONFIG.UF_FIELD2] || '';
+                    document.getElementById('field3').value = item[CONFIG.UF_FIELD3] || '';
+
+                    // Триггерим отображение/скрытие блока
+                    toggleFields();
+
+                    console.log('✅ Данные загружены', item);
+                }
+            );
+        }
+
+        // ============================================================
+        //  СОХРАНЕНИЕ ДАННЫХ В БИТРИКС24
+        // ============================================================
+        function saveToBitrix() {
+            const btn = document.getElementById('btnSave');
+            const statusEl = document.getElementById('statusMsg');
+
+            btn.disabled = true;
+            btn.textContent = 'Сохранение...';
+            statusEl.textContent = '';
+            statusEl.className = 'status-msg';
+
+            const isChecked = document.getElementById('mainCheckbox').checked;
+
+            const fields = {
+                [CONFIG.UF_CHECKBOX]: isChecked ? '1' : '0',
+                [CONFIG.UF_FIELD1]:   isChecked ? document.getElementById('field1').value : '',
+                [CONFIG.UF_FIELD2]:   isChecked ? document.getElementById('field2').value : '',
+                [CONFIG.UF_FIELD3]:   isChecked ? document.getElementById('field3').value : '',
+            };
+
+            BX24.callMethod(
+                'crm.item.update',
+                {
+                    entityTypeId: CONFIG.ENTITY_TYPE_ID,
+                    id: dealId,
+                    fields: fields
+                },
+                function (result) {
+                    btn.disabled = false;
+                    btn.textContent = 'Сохранить в сделку';
+
+                    if (result.error()) {
+                        statusEl.textContent = '❌ Ошибка: ' + result.error_description();
+                        statusEl.className = 'status-msg error';
+                        console.error('Ошибка сохранения:', result.error(), result.error_description());
+                    } else {
+                        statusEl.textContent = '✅ Сохранено!';
+                        statusEl.className = 'status-msg success';
+                        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+                        console.log('✅ Данные сохранены');
+                    }
+                }
+            );
+        }
+
+        // ============================================================
+        //  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        // ============================================================
+        function showError(msg) {
+            document.getElementById('loadingBlock').innerHTML = '⚠️ ' + msg;
+            document.getElementById('loadingBlock').style.color = '#c62828';
+        }
+    </script>
+</body>
+</html>
