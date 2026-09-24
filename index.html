@@ -42,46 +42,106 @@
         <button class="btn-save" id="btn" onclick="save()">Сохранить в сделку</button>
         <span id="msg" style="margin-left: 10px;"></span>
     </div>
+
     <script>
-        const C = { E: 2, U1: 'UF_CRM_1790252290', U2: 'UF_CRM_1790252367', U3: 'UF_CRM_1790252404', U4: 'UF_CRM_1790252433' };
+        const C = { 
+            E: 2, // entityTypeId: 2 (Сделки)
+            U1: 'UF_CRM_1790252290', 
+            U2: 'UF_CRM_1790252367', 
+            U3: 'UF_CRM_1790252404', 
+            U4: 'UF_CRM_1790252433' 
+        };
         let id = null;
+
+        // Вспомогательная функция получения параметров URL
+        function getPlacementOptions() {
+            try {
+                const placementInfo = BX24.placement.info();
+                if (placementInfo && placementInfo.options && placementInfo.options.ID) {
+                    return placementInfo.options.ID;
+                }
+            } catch (e) {}
+
+            // Резервный поиск ID в URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const placementOptions = urlParams.get('PLACEMENT_OPTIONS');
+            if (placementOptions) {
+                try {
+                    const parsed = JSON.parse(placementOptions);
+                    return parsed.ID || parsed.id;
+                } catch (e) {}
+            }
+            return urlParams.get('id') || urlParams.get('ID');
+        }
+
         BX24.init(() => {
             BX24.placement.resizeWindow(600, 400);
-            const p = BX24.placement.get();
-            if (p && p.id) { id = p.id; loadDeal(); }
-            else { document.getElementById('loading').innerText = 'Ошибка: не найден ID сделки'; }
+            
+            id = getPlacementOptions();
+
+            if (id) { 
+                loadDeal(); 
+            } else { 
+                document.getElementById('loading').innerText = 'Ошибка: не найден ID элемента/сделки'; 
+            }
+
             document.getElementById('chk').onchange = toggle;
         });
+
         function toggle() {
             const c = document.getElementById('chk').checked;
             document.getElementById('fields').className = c ? 'hidden-block visible' : 'hidden-block';
             BX24.placement.resizeWindow(600, c ? 450 : 200);
         }
+
         function loadDeal() {
             BX24.callMethod('crm.item.get', { entityTypeId: C.E, id: id }, r => {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('form').style.display = 'block';
                 if (r.error()) {
                     document.getElementById('loading').innerText = 'Ошибка: ' + r.error_description();
                     return;
                 }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('form').style.display = 'block';
+
                 const d = r.data().item;
-                document.getElementById('chk').checked = (d[C.U1] == '1' || d[C.U1] == 1);
+                document.getElementById('chk').checked = (d[C.U1] == '1' || d[C.U1] == 1 || d[C.U1] === true);
                 document.getElementById('mat').value = d[C.U2] || '';
                 document.getElementById('col').value = d[C.U3] || '';
                 document.getElementById('cont').value = d[C.U4] || '';
+                
                 toggle();
             });
         }
+
         function save() {
-            const b = document.getElementById('btn'); const m = document.getElementById('msg');
-            b.disabled = true; b.innerText = 'Сохранение...';
+            const b = document.getElementById('btn'); 
+            const m = document.getElementById('msg');
+            
+            b.disabled = true; 
+            b.innerText = 'Сохранение...';
+            m.innerText = '';
+
             const c = document.getElementById('chk').checked;
-            const f = { [C.U1]: c ? '1' : '0', [C.U2]: c ? document.getElementById('mat').value : '', [C.U3]: c ? document.getElementById('col').value : '', [C.U4]: c ? document.getElementById('cont').value : '' };
+            const f = { 
+                [C.U1]: c ? '1' : '0', 
+                [C.U2]: c ? document.getElementById('mat').value : '', 
+                [C.U3]: c ? document.getElementById('col').value : '', 
+                [C.U4]: c ? document.getElementById('cont').value : '' 
+            };
+
             BX24.callMethod('crm.item.update', { entityTypeId: C.E, id: id, fields: f }, r => {
-                b.disabled = false; b.innerText = 'Сохранить в сделку';
-                if (r.error()) { m.innerText = 'Ошибка: ' + r.error_description(); m.style.color = 'red'; }
-                else { m.innerText = '✅ Сохранено!'; m.style.color = 'green'; setTimeout(() => m.innerText = '', 3000); }
+                b.disabled = false; 
+                b.innerText = 'Сохранить в сделку';
+
+                if (r.error()) { 
+                    m.innerText = 'Ошибка: ' + r.error_description(); 
+                    m.style.color = 'red'; 
+                } else { 
+                    m.innerText = '✅ Сохранено!'; 
+                    m.style.color = 'green'; 
+                    setTimeout(() => m.innerText = '', 3000); 
+                }
             });
         }
     </script>
