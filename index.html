@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Виджет</title>
-    <script src="//api.bitrix24.com/api/v1/"></script>
+    <script src="https://api.bitrix24.com/api/v1/"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         .hidden-block { display: none; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; }
@@ -45,7 +45,7 @@
 
     <script>
         const C = { 
-            E: 2, // entityTypeId: 2 (Сделки)
+            E: 2, // entityTypeId: 2 (Сделка)
             U1: 'UF_CRM_1790252290', 
             U2: 'UF_CRM_1790252367', 
             U3: 'UF_CRM_1790252404', 
@@ -53,7 +53,6 @@
         };
         let id = null;
 
-        // Вспомогательная функция получения параметров URL
         function getPlacementOptions() {
             try {
                 const placementInfo = BX24.placement.info();
@@ -62,7 +61,6 @@
                 }
             } catch (e) {}
 
-            // Резервный поиск ID в URL
             const urlParams = new URLSearchParams(window.location.search);
             const placementOptions = urlParams.get('PLACEMENT_OPTIONS');
             if (placementOptions) {
@@ -74,19 +72,32 @@
             return urlParams.get('id') || urlParams.get('ID');
         }
 
-        BX24.init(() => {
-            BX24.placement.resizeWindow(600, 400);
-            
-            id = getPlacementOptions();
-
-            if (id) { 
-                loadDeal(); 
-            } else { 
-                document.getElementById('loading').innerText = 'Ошибка: не найден ID элемента/сделки'; 
+        const initTimeout = setTimeout(() => {
+            const loadingElem = document.getElementById('loading');
+            if (loadingElem && loadingElem.style.display !== 'none') {
+                loadingElem.innerText = 'Ошибка: приложение должно открываться внутри Битрикс24.';
+                loadingElem.style.color = 'red';
             }
+        }, 5000);
 
-            document.getElementById('chk').onchange = toggle;
-        });
+        if (typeof BX24 !== 'undefined') {
+            BX24.init(() => {
+                clearTimeout(initTimeout);
+                BX24.placement.resizeWindow(600, 400);
+                
+                id = getPlacementOptions();
+
+                if (id) { 
+                    loadDeal(); 
+                } else { 
+                    document.getElementById('loading').innerText = 'Ошибка: не найден ID сделки'; 
+                }
+
+                document.getElementById('chk').onchange = toggle;
+            });
+        } else {
+            document.getElementById('loading').innerText = 'Ошибка: библиотека BX24 не загружена.';
+        }
 
         function toggle() {
             const c = document.getElementById('chk').checked;
