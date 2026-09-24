@@ -23,7 +23,12 @@
         <div id="fields" class="hidden-block">
             <div class="field-group">
                 <label>Вид материала:</label>
-                <select id="mat"><option>Загрузка...</option></select>
+                <select id="mat">
+                    <option value="">-- Выберите --</option>
+                    <option value="Полиэстер">Полиэстер</option>
+                    <option value="Лавсан">Лавсан</option>
+                    <option value="Микрофибра">Микрофибра</option>
+                </select>
             </div>
             <div class="field-group">
                 <label>Цвет:</label>
@@ -39,29 +44,14 @@
     </div>
     <script>
         const C = { E: 2, U1: 'UF_CRM_1790252290', U2: 'UF_CRM_1790252367', U3: 'UF_CRM_1790252404', U4: 'UF_CRM_1790252433' };
-        let id = null, list = {};
+        let id = null;
         BX24.init(() => {
             BX24.placement.resizeWindow(600, 400);
             const p = BX24.placement.get();
-            if (p && p.id) { id = p.id; loadList(); }
+            if (p && p.id) { id = p.id; loadDeal(); }
             else { document.getElementById('loading').innerText = 'Ошибка: не найден ID сделки'; }
             document.getElementById('chk').onchange = toggle;
         });
-        function loadList() {
-            BX24.callMethod('crm.item.property.get', { entityTypeId: C.E, field: C.U2 }, r => {
-                if (r.error()) return;
-                const s = r.data().property.settings;
-                if (s && s.LIST) list = s.LIST;
-                fillSelect(); loadDeal();
-            });
-        }
-        function fillSelect() {
-            const s = document.getElementById('mat');
-            s.innerHTML = '<option value="">-- Выберите --</option>';
-            for (let [i, v] of Object.entries(list)) {
-                let o = document.createElement('option'); o.value = i; o.textContent = v; s.appendChild(o);
-            }
-        }
         function toggle() {
             const c = document.getElementById('chk').checked;
             document.getElementById('fields').className = c ? 'hidden-block visible' : 'hidden-block';
@@ -71,7 +61,10 @@
             BX24.callMethod('crm.item.get', { entityTypeId: C.E, id: id }, r => {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('form').style.display = 'block';
-                if (r.error()) return;
+                if (r.error()) {
+                    document.getElementById('loading').innerText = 'Ошибка: ' + r.error_description();
+                    return;
+                }
                 const d = r.data().item;
                 document.getElementById('chk').checked = (d[C.U1] == '1' || d[C.U1] == 1);
                 document.getElementById('mat').value = d[C.U2] || '';
