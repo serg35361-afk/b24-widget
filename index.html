@@ -3,17 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Виджет сделки</title>
-
-    <!-- 
-        БИБЛИОТЕКА БИТРИКС24
-        Она автоматически определяет, в каком портале находится,
-        и настраивает авторизацию. Подключается всегда с api.bitrix24.com
-    -->
+    <title>Виджет синтетических материалов</title>
     <script src="//api.bitrix24.com/api/v1/"></script>
-
     <style>
-        /* Стили под интерфейс Битрикс24 */
         body {
             font-family: "Helvetica Neue", Arial, sans-serif;
             font-size: 14px;
@@ -22,28 +14,16 @@
             margin: 0;
             background: #fff;
         }
-
         .widget-title {
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 15px;
             color: #2067b0;
         }
-
-        .checkbox-row {
-            margin-bottom: 15px;
-        }
-
-        .checkbox-row label {
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        .checkbox-row input[type="checkbox"] {
-            margin-right: 8px;
-            transform: scale(1.2);
-        }
-
+        .checkbox-row { margin-bottom: 15px; }
+        .checkbox-row label { cursor: pointer; font-weight: 500; }
+        .checkbox-row input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
+        
         .hidden-block {
             display: none;
             background: #f8f9fa;
@@ -51,26 +31,12 @@
             border-radius: 6px;
             padding: 15px;
             margin-top: 10px;
-            transition: all 0.3s ease;
         }
-
-        .hidden-block.visible {
-            display: block;
-        }
-
-        .field-group {
-            margin-bottom: 12px;
-        }
-
-        .field-group label {
-            display: block;
-            margin-bottom: 4px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .field-group input[type="text"],
-        .field-group textarea {
+        .hidden-block.visible { display: block; }
+        
+        .field-group { margin-bottom: 12px; }
+        .field-group label { display: block; margin-bottom: 4px; font-weight: 500; color: #555; }
+        .field-group input, .field-group select {
             width: 100%;
             padding: 8px 10px;
             border: 1px solid #ccc;
@@ -78,14 +44,12 @@
             font-size: 14px;
             box-sizing: border-box;
         }
-
-        .field-group input:focus,
-        .field-group textarea:focus {
+        .field-group input:focus, .field-group select:focus {
             border-color: #2067b0;
             outline: none;
             box-shadow: 0 0 3px rgba(32, 103, 176, 0.3);
         }
-
+        
         .btn-save {
             background: #2067b0;
             color: #fff;
@@ -96,56 +60,43 @@
             cursor: pointer;
             margin-top: 10px;
         }
-
-        .btn-save:hover {
-            background: #1a5490;
-        }
-
-        .btn-save:disabled {
-            background: #aaa;
-            cursor: not-allowed;
-        }
-
-        .status-msg {
-            margin-left: 12px;
-            font-weight: 500;
-        }
-
+        .btn-save:hover { background: #1a5490; }
+        .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+        
+        .status-msg { margin-left: 12px; font-weight: 500; }
         .status-msg.success { color: #2e7d32; }
         .status-msg.error { color: #c62828; }
-
-        .loading {
-            color: #888;
-            font-style: italic;
-        }
+        .loading { color: #888; font-style: italic; }
     </style>
 </head>
 <body>
 
-    <div class="widget-title">📋 Дополнительные параметры сделки</div>
+    <div class="widget-title">🧪 Синтетические материалы</div>
 
-    <div id="loadingBlock" class="loading">Загрузка данных сделки...</div>
+    <div id="loadingBlock" class="loading">Загрузка данных и настроек списка...</div>
 
     <div id="formBlock" style="display: none;">
         <div class="checkbox-row">
             <label>
                 <input type="checkbox" id="mainCheckbox">
-                Требуется расширенная информация
+                Используется синтетический материал
             </label>
         </div>
 
         <div id="hiddenFields" class="hidden-block">
             <div class="field-group">
-                <label for="field1">Комментарий менеджера:</label>
-                <textarea id="field1" rows="2" placeholder="Введите комментарий..."></textarea>
+                <label for="fieldMaterial">Вид синтетического материала:</label>
+                <select id="fieldMaterial">
+                    <option value="">-- Загрузка списка... --</option>
+                </select>
             </div>
             <div class="field-group">
-                <label for="field2">Срок исполнения (дней):</label>
-                <input type="text" id="field2" placeholder="Например: 14">
+                <label for="fieldColor">Цвет синтетического материала:</label>
+                <input type="text" id="fieldColor" placeholder="Например: Белый">
             </div>
             <div class="field-group">
-                <label for="field3">Ответственный отдел:</label>
-                <input type="text" id="field3" placeholder="Например: Логистика">
+                <label for="fieldContent">Содержание синтетического материала (%):</label>
+                <input type="number" id="fieldContent" placeholder="Например: 100" min="0" max="100">
             </div>
         </div>
 
@@ -158,47 +109,80 @@
     </div>
 
     <script>
-        // ============================================================
-        //  НАСТРОЙКИ — ЗАМЕНИТЕ НА ВАШИ РЕАЛЬНЫЕ КОДЫ ПОЛЕЙ!
-        //  Узнать коды: CRM → Настройки → Пользовательские поля → Сделки
-        // ============================================================
+        // Коды ваших пользовательских полей
         const CONFIG = {
-            ENTITY_TYPE_ID: 2,  // 2 = Сделки (не менять)
-            UF_CHECKBOX: 'UF_CRM_1700000001',  // Поле «Да/Нет»
-            UF_FIELD1:   'UF_CRM_1700000002',  // Текстовое поле
-            UF_FIELD2:   'UF_CRM_1700000003',  // Текстовое поле
-            UF_FIELD3:   'UF_CRM_1700000004',  // Текстовое поле
+            ENTITY_TYPE_ID: 2,  // 2 = Сделки
+            UF_CHECKBOX: 'UF_CRM_1790252290',      // Используется синтетический материал
+            UF_MATERIAL: 'UF_CRM_1790252367',      // Вид синтетического материала (СПИСОК)
+            UF_COLOR: 'UF_CRM_1790252404',         // Цвет синтетического материала
+            UF_CONTENT: 'UF_CRM_1790252433'        // Содержание синтетического материала
         };
 
         let dealId = null;
+        let materialList = {}; // Сюда сохраним ID и названия материалов
 
-        // ============================================================
-        //  ИНИЦИАЛИЗАЦИЯ — запускается, когда Битрикс загрузит виджет
-        // ============================================================
+        // Инициализация при загрузке виджета
         BX24.init(function () {
-
-            // 1) Устанавливаем размер iframe под содержимое
             BX24.placement.resizeWindow(600, 400);
 
-            // 2) Получаем информацию о том, куда мы встроены
-            //    placement.get() возвращает { id: "123", type: "CRM_DEAL", ... }
             const placementInfo = BX24.placement.get();
 
             if (placementInfo && placementInfo.id) {
                 dealId = placementInfo.id;
-                console.log('📌 Виджет загружен в сделку ID:', dealId);
-                loadDealData();
+                console.log('Виджет загружен в сделку ID:', dealId);
+                
+                // Сначала загружаем список вариантов для поля "Материал"
+                loadMaterialList();
             } else {
                 showError('Не удалось определить ID сделки.');
             }
 
-            // 3) Обработчик галочки
+            // Обработчик галочки
             document.getElementById('mainCheckbox').addEventListener('change', toggleFields);
         });
 
-        // ============================================================
-        //  СКРЫТИЕ / ПОКАЗ ПОЛЕЙ
-        // ============================================================
+        // 1. Загружаем варианты списка из Битрикс24
+        function loadMaterialList() {
+            BX24.callMethod(
+                'crm.item.property.get',
+                {
+                    entityTypeId: CONFIG.ENTITY_TYPE_ID,
+                    field: CONFIG.UF_MATERIAL
+                },
+                function (result) {
+                    if (result.error()) {
+                        showError('Ошибка загрузки списка: ' + result.error_description());
+                        return;
+                    }
+
+                    // Получаем словарь LIST (например: { "123": "Полиэстер", "124": "Лавсан" })
+                    const settings = result.data().property.settings;
+                    if (settings && settings.LIST) {
+                        materialList = settings.LIST;
+                    }
+
+                    populateSelect();
+                    
+                    // После того как список готов, загружаем данные самой сделки
+                    loadDealData();
+                }
+            );
+        }
+
+        // 2. Заполняем выпадающий список (select)
+        function populateSelect() {
+            const select = document.getElementById('fieldMaterial');
+            select.innerHTML = '<option value="">-- Выберите --</option>';
+
+            for (const [id, value] of Object.entries(materialList)) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = value;
+                select.appendChild(option);
+            }
+        }
+
+        // 3. Скрытие/показ полей
         function toggleFields() {
             const isChecked = document.getElementById('mainCheckbox').checked;
             const block = document.getElementById('hiddenFields');
@@ -207,19 +191,11 @@
                 block.classList.add('visible');
             } else {
                 block.classList.remove('visible');
-                // Опционально: очищаем поля при снятии галочки
-                // document.getElementById('field1').value = '';
-                // document.getElementById('field2').value = '';
-                // document.getElementById('field3').value = '';
             }
-
-            // Подстраиваем размер iframe
             setTimeout(() => BX24.placement.resizeWindow(600, isChecked ? 450 : 200), 100);
         }
 
-        // ============================================================
-        //  ЗАГРУЗКА ДАННЫХ ИЗ БИТРИКС24
-        // ============================================================
+        // 4. Загрузка данных сделки
         function loadDealData() {
             BX24.callMethod(
                 'crm.item.get',
@@ -232,7 +208,7 @@
                     document.getElementById('formBlock').style.display = 'block';
 
                     if (result.error()) {
-                        showError('Ошибка загрузки: ' + result.error_description());
+                        showError('Ошибка загрузки сделки: ' + result.error_description());
                         return;
                     }
 
@@ -243,27 +219,21 @@
                     }
 
                     // Заполняем галочку
-                    const isChecked = item[CONFIG.UF_CHECKBOX] === '1' 
-                                   || item[CONFIG.UF_CHECKBOX] === 1 
-                                   || item[CONFIG.UF_CHECKBOX] === true;
+                    const isChecked = item[CONFIG.UF_CHECKBOX] === '1' || item[CONFIG.UF_CHECKBOX] === 1 || item[CONFIG.UF_CHECKBOX] === true;
                     document.getElementById('mainCheckbox').checked = isChecked;
 
-                    // Заполняем текстовые поля
-                    document.getElementById('field1').value = item[CONFIG.UF_FIELD1] || '';
-                    document.getElementById('field2').value = item[CONFIG.UF_FIELD2] || '';
-                    document.getElementById('field3').value = item[CONFIG.UF_FIELD3] || '';
+                    // Заполняем поля (для списка подставляем ID)
+                    document.getElementById('fieldMaterial').value = item[CONFIG.UF_MATERIAL] || '';
+                    document.getElementById('fieldColor').value = item[CONFIG.UF_COLOR] || '';
+                    document.getElementById('fieldContent').value = item[CONFIG.UF_CONTENT] || '';
 
-                    // Триггерим отображение/скрытие блока
                     toggleFields();
-
-                    console.log('✅ Данные загружены', item);
+                    console.log('Данные сделки загружены', item);
                 }
             );
         }
 
-        // ============================================================
-        //  СОХРАНЕНИЕ ДАННЫХ В БИТРИКС24
-        // ============================================================
+        // 5. Сохранение данных в Битрикс24
         function saveToBitrix() {
             const btn = document.getElementById('btnSave');
             const statusEl = document.getElementById('statusMsg');
@@ -277,9 +247,10 @@
 
             const fields = {
                 [CONFIG.UF_CHECKBOX]: isChecked ? '1' : '0',
-                [CONFIG.UF_FIELD1]:   isChecked ? document.getElementById('field1').value : '',
-                [CONFIG.UF_FIELD2]:   isChecked ? document.getElementById('field2').value : '',
-                [CONFIG.UF_FIELD3]:   isChecked ? document.getElementById('field3').value : '',
+                // Если галочка снята, отправляем пустую строку, иначе - ID выбранного материала
+                [CONFIG.UF_MATERIAL]: isChecked ? document.getElementById('fieldMaterial').value : '',
+                [CONFIG.UF_COLOR]: isChecked ? document.getElementById('fieldColor').value : '',
+                [CONFIG.UF_CONTENT]: isChecked ? document.getElementById('fieldContent').value : ''
             };
 
             BX24.callMethod(
@@ -294,22 +265,17 @@
                     btn.textContent = 'Сохранить в сделку';
 
                     if (result.error()) {
-                        statusEl.textContent = '❌ Ошибка: ' + result.error_description();
+                        statusEl.textContent = 'Ошибка: ' + result.error_description();
                         statusEl.className = 'status-msg error';
-                        console.error('Ошибка сохранения:', result.error(), result.error_description());
                     } else {
                         statusEl.textContent = '✅ Сохранено!';
                         statusEl.className = 'status-msg success';
                         setTimeout(() => { statusEl.textContent = ''; }, 3000);
-                        console.log('✅ Данные сохранены');
                     }
                 }
             );
         }
 
-        // ============================================================
-        //  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-        // ============================================================
         function showError(msg) {
             document.getElementById('loadingBlock').innerHTML = '⚠️ ' + msg;
             document.getElementById('loadingBlock').style.color = '#c62828';
