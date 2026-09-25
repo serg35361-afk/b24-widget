@@ -1,12 +1,10 @@
 [build]
   publish = "."
 
-# Явно обрабатываем POST и GET запросы со статусом 200 (Rewrite)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
+# Подключаем Edge Function для всех входящих маршрутов
+[[edge_functions]]
+  path = "/*"
+  function = "b24"
 
 [[headers]]
   for = "/*"
