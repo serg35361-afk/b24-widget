@@ -1,7 +1,6 @@
 [build]
   publish = "."
 
-# Подключаем Edge Function для всех входящих маршрутов
 [[edge_functions]]
   path = "/*"
   function = "b24"
@@ -13,4 +12,4 @@
       X-Frame-Options = "ALLOWALL"
       Access-Control-Allow-Origin = "*"
       Access-Control-Allow-Methods = "GET, POST, OPTIONS"
-      Access-Control-Allow-Headers = "Content-Type, Authorization"
+      Access-Control-Allow-Headers = "*"
