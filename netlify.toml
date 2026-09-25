@@ -1,6 +1,14 @@
 [build]
   publish = "."
 
+# Редирект с /index.html на корень с сохранением параметров
+[[redirects]]
+  from = "/index.html"
+  to = "/"
+  status = 200
+  force = true
+
+# Фоллбэк для всех остальных путей
 [[redirects]]
   from = "/*"
   to = "/index.html"
