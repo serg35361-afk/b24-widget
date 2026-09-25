@@ -1,21 +1,7 @@
 [build]
   publish = "."
 
-# Перехватываем POST и GET запросы к корню
-[[redirects]]
-  from = "/"
-  to = "/index.html"
-  status = 200
-  force = true
-
-# Перехватываем POST и GET запросы к /index.html
-[[redirects]]
-  from = "/index.html"
-  to = "/index.html"
-  status = 200
-  force = true
-
-# Фоллбэк для всех остальных запросов с параметрами Битрикс24
+# Явно обрабатываем POST и GET запросы со статусом 200 (Rewrite)
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -28,3 +14,5 @@
       Content-Security-Policy = "frame-ancestors *;"
       X-Frame-Options = "ALLOWALL"
       Access-Control-Allow-Origin = "*"
+      Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+      Access-Control-Allow-Headers = "Content-Type, Authorization"
