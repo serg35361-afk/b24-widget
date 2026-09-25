@@ -10,5 +10,6 @@
 [[headers]]
   for = "/*"
     [headers.values]
-      Content-Security-Policy = "frame-ancestors *"
+      Content-Security-Policy = "frame-ancestors *;"
       X-Frame-Options = "ALLOWALL"
+      Access-Control-Allow-Origin = "*"
