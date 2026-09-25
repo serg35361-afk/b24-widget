@@ -1,11 +1,18 @@
 export default async (request, context) => {
-  const url = new URL(request.url);
-  url.pathname = "/index.html";
+  // Если запрос пришел методом POST (от Битрикс24), пересоздаем его как GET
+  if (request.method === "POST") {
+    const url = new URL(request.url);
+    url.pathname = "/index.html";
+    
+    // Делаем внутренее обращение к index.html через GET
+    const getRequest = new Request(url.toString(), {
+      method: "GET",
+      headers: request.headers,
+    });
+    
+    return fetch(getRequest);
+  }
 
-  // Принудительно запрашиваем index.html методом GET
-  const response = await context.rewrite(url.toString(), {
-    method: "GET"
-  });
-
-  return response;
+  // Для обычных GET-запросов отдаем стандартно
+  return context.next();
 };
