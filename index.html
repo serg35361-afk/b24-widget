@@ -13,12 +13,12 @@
         .field-group { margin-bottom: 10px; }
         .field-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .field-group input, .field-group select { width: 100%; padding: 8px; box-sizing: border-box; }
-        #debug { background: #eee; padding: 8px; font-size: 11px; color: #333; margin-top: 15px; border-radius: 4px; display: none; }
+        #debug { background: #f0f0f0; border: 1px solid #ccc; padding: 8px; font-size: 11px; color: #333; margin-top: 15px; border-radius: 4px; display: none; word-break: break-all; }
     </style>
 </head>
 <body>
     <h3 style="color: #2067b0; margin-top: 0;">🧪 Синтетические материалы</h3>
-    <div id="loading" style="color: #888;">Загрузка данных Битрикс24...</div>
+    <div id="loading" style="color: #888;">Загрузка данных сделки...</div>
     
     <div id="form" style="display: none;">
         <label><input type="checkbox" id="chk"> Используется синтетический материал</label>
@@ -49,13 +49,12 @@
 
     <script>
         const C = { 
-            E: 2, // entityTypeId: 2 (Сделка)
             U1: 'UF_CRM_1790252290', 
             U2: 'UF_CRM_1790252367', 
             U3: 'UF_CRM_1790252404', 
             U4: 'UF_CRM_1790252433' 
         };
-        let id = null;
+        let dealId = null;
 
         function logDebug(msg) {
             const dbg = document.getElementById('debug');
@@ -63,25 +62,20 @@
             dbg.innerHTML += `<div>> ${msg}</div>`;
         }
 
-        function getPlacementOptions() {
+        function getDealId() {
             try {
-                const placementInfo = BX24.placement.info();
-                logDebug('Placement info: ' + JSON.stringify(placementInfo));
-                if (placementInfo && placementInfo.options && placementInfo.options.ID) {
-                    return placementInfo.options.ID;
+                const info = BX24.placement.info();
+                if (info && info.options && info.options.ID) {
+                    return info.options.ID;
                 }
-            } catch (e) {
-                logDebug('Placement info error: ' + e.message);
-            }
+            } catch (e) {}
 
             const urlParams = new URLSearchParams(window.location.search);
-            const placementOptions = urlParams.get('PLACEMENT_OPTIONS');
-            logDebug('URL PLACEMENT_OPTIONS: ' + placementOptions);
-
-            if (placementOptions) {
+            const pOpt = urlParams.get('PLACEMENT_OPTIONS');
+            if (pOpt) {
                 try {
-                    const parsed = JSON.parse(placementOptions);
-                    return parsed.ID || parsed.id;
+                    const parsed = JSON.parse(pOpt);
+                    if (parsed.ID || parsed.id) return parsed.ID || parsed.id;
                 } catch (e) {}
             }
             return urlParams.get('id') || urlParams.get('ID');
@@ -89,13 +83,12 @@
 
         if (typeof BX24 !== 'undefined') {
             BX24.init(() => {
-                logDebug('BX24.init успешно вызван');
                 BX24.placement.resizeWindow(600, 450);
                 
-                id = getPlacementOptions();
-                logDebug('Полученный ID сделки: ' + id);
+                dealId = getDealId();
+                logDebug('ID сделки: ' + dealId);
 
-                if (id) { 
+                if (dealId) { 
                     loadDeal(); 
                 } else { 
                     document.getElementById('loading').innerText = 'Ошибка: не найден ID сделки'; 
@@ -114,17 +107,18 @@
         }
 
         function loadDeal() {
-            BX24.callMethod('crm.item.get', { entityTypeId: C.E, id: id }, r => {
+            // Используем стандартный crm.deal.get вместо crm.item.get
+            BX24.callMethod('crm.deal.get', { id: dealId }, r => {
                 if (r.error()) {
-                    document.getElementById('loading').innerText = 'Ошибка API Битрикс24: ' + r.error_description();
-                    logDebug('API Error: ' + JSON.stringify(r.error()));
+                    document.getElementById('loading').innerText = 'Ошибка API: ' + r.error_description();
+                    logDebug('Ошибка crm.deal.get: ' + JSON.stringify(r.error()));
                     return;
                 }
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('form').style.display = 'block';
 
-                const d = r.data().item;
+                const d = r.data();
                 document.getElementById('chk').checked = (d[C.U1] == '1' || d[C.U1] == 1 || d[C.U1] === true);
                 document.getElementById('mat').value = d[C.U2] || '';
                 document.getElementById('col').value = d[C.U3] || '';
@@ -143,14 +137,15 @@
             m.innerText = '';
 
             const c = document.getElementById('chk').checked;
-            const f = { 
+            const fields = { 
                 [C.U1]: c ? '1' : '0', 
                 [C.U2]: c ? document.getElementById('mat').value : '', 
                 [C.U3]: c ? document.getElementById('col').value : '', 
                 [C.U4]: c ? document.getElementById('cont').value : '' 
             };
 
-            BX24.callMethod('crm.item.update', { entityTypeId: C.E, id: id, fields: f }, r => {
+            // Используем crm.deal.update
+            BX24.callMethod('crm.deal.update', { id: dealId, fields: fields }, r => {
                 b.disabled = false; 
                 b.innerText = 'Сохранить в сделку';
 
