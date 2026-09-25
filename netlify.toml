@@ -1,6 +1,35 @@
 [build]
   publish = "."
 
+# Перехватываем POST и GET запросы к корню
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+  force = true
+
+# Перехватываем POST и GET запросы к /index.html
+[[redirects]]
+  from = "/index.html"
+  to = "/index.html"
+  status = 200
+  force = true
+
+# Фоллбэк для всех остальных запросов с параметрами Битрикс24
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+      Content-Security-Policy = "frame-ancestors *;"
+      X-Frame-Options = "ALLOWALL"
+      Access-Control-Allow-Origin = "*"[build]
+  publish = "."
+
 # Редирект с /index.html на корень с сохранением параметров
 [[redirects]]
   from = "/index.html"
