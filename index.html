@@ -6,13 +6,14 @@
     <title>Виджет</title>
     <script src="https://api.bitrix24.com/api/v1/"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 15px; margin: 0; }
-        .hidden-block { display: none; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; }
+        body { font-family: Arial, sans-serif; padding: 15px; margin: 0; background: #fff; }
+        .hidden-block { display: none; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #eaebec; }
         .visible { display: block; }
-        .btn-save { background: #2067b0; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        .field-group { margin-bottom: 10px; }
-        .field-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .field-group input, .field-group select { width: 100%; padding: 8px; box-sizing: border-box; }
+        .btn-save { background: #2067b0; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
+        .btn-save:hover { background: #18528f; }
+        .field-group { margin-bottom: 12px; }
+        .field-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #333; }
+        .field-group input, .field-group select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         #debug { background: #f0f0f0; border: 1px solid #ccc; padding: 8px; font-size: 11px; color: #333; margin-top: 15px; border-radius: 4px; display: none; word-break: break-all; }
     </style>
 </head>
@@ -21,7 +22,10 @@
     <div id="loading" style="color: #888;">Загрузка данных сделки...</div>
     
     <div id="form" style="display: none;">
-        <label><input type="checkbox" id="chk"> Используется синтетический материал</label>
+        <label style="cursor: pointer; font-weight: bold;">
+            <input type="checkbox" id="chk"> Используется синтетический материал
+        </label>
+        
         <div id="fields" class="hidden-block">
             <div class="field-group">
                 <label>Вид материала:</label>
@@ -41,8 +45,11 @@
                 <input type="number" id="cont">
             </div>
         </div>
-        <button class="btn-save" id="btn" onclick="save()">Сохранить в сделку</button>
-        <span id="msg" style="margin-left: 10px;"></span>
+        
+        <div>
+            <button class="btn-save" id="btn" onclick="save()">Сохранить в сделку</button>
+            <span id="msg" style="margin-left: 10px; font-size: 13px;"></span>
+        </div>
     </div>
 
     <div id="debug"></div>
@@ -60,6 +67,13 @@
             const dbg = document.getElementById('debug');
             dbg.style.display = 'block';
             dbg.innerHTML += `<div>> ${msg}</div>`;
+        }
+
+        function safeResize(w, h) {
+            // Проверяем наличие метода перед вызовом, чтобы избежать Uncaught TypeError
+            if (typeof BX24 !== 'undefined' && BX24.placement && typeof BX24.placement.resizeWindow === 'function') {
+                BX24.placement.resizeWindow(w, h);
+            }
         }
 
         function getDealId() {
@@ -83,7 +97,7 @@
 
         if (typeof BX24 !== 'undefined') {
             BX24.init(() => {
-                BX24.placement.resizeWindow(600, 450);
+                safeResize(600, 450);
                 
                 dealId = getDealId();
                 logDebug('ID сделки: ' + dealId);
@@ -103,11 +117,10 @@
         function toggle() {
             const c = document.getElementById('chk').checked;
             document.getElementById('fields').className = c ? 'hidden-block visible' : 'hidden-block';
-            BX24.placement.resizeWindow(600, c ? 450 : 200);
+            safeResize(600, c ? 450 : 200);
         }
 
         function loadDeal() {
-            // Используем стандартный crm.deal.get вместо crm.item.get
             BX24.callMethod('crm.deal.get', { id: dealId }, r => {
                 if (r.error()) {
                     document.getElementById('loading').innerText = 'Ошибка API: ' + r.error_description();
@@ -144,7 +157,6 @@
                 [C.U4]: c ? document.getElementById('cont').value : '' 
             };
 
-            // Используем crm.deal.update
             BX24.callMethod('crm.deal.update', { id: dealId, fields: fields }, r => {
                 b.disabled = false; 
                 b.innerText = 'Сохранить в сделку';
