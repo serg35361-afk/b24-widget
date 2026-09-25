@@ -1,1 +1,14 @@
+[build]
+  publish = "."
 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+      Content-Security-Policy = "frame-ancestors *"
+      X-Frame-Options = "ALLOWALL"
